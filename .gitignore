@@ -1,0 +1,7 @@
+# data files
+*.parquet
+*.txt
+*.csv
+
+# folders
+data/
