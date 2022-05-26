@@ -8,3 +8,7 @@
 # folders
 data/
 output/
+mlruns/
+
+# metainfo
+.ipynb_checkpoints
