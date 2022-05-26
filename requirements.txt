@@ -7,3 +7,4 @@ fastparquet
 pyarrow
 ipykernel
 mlflow
+hyperopt
