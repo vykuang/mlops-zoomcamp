@@ -4,7 +4,6 @@ scikit-learn
 matplotlib
 seaborn
 fastparquet
-pyarrow
 ipykernel
 mlflow
 hyperopt
