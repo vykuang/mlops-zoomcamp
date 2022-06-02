@@ -20,6 +20,10 @@ from sklearn.metrics import mean_squared_error
 
 import mlflow
 
+from prefect import flow, task
+from prefect.task_runners import SequentialTaskRunner
+
+@task
 def read_dataframe(filename):
     """Reads NYC green cab trip data from 2021
     """
@@ -42,10 +46,8 @@ def read_dataframe(filename):
     
     return df
 
-def add_features(train_path, val_path):
-    
-    df_train = read_dataframe(train_path)
-    df_val = read_dataframe(val_path)
+@task
+def add_features(df_train, df_val):
 
     df_train['PU_DO'] = df_train['PULocationID'] + '_' + df_train['DOLocationID']
     df_val['PU_DO'] = df_val['PULocationID'] + '_' + df_val['DOLocationID']
@@ -106,6 +108,7 @@ def add_features(train_path, val_path):
     
 # xgboost and hyperopt
 
+# @task
 def train_model_search(train, valid, y_val):
 
     def objective(params):
@@ -144,11 +147,10 @@ def train_model_search(train, valid, y_val):
     )
     return
 
-
-
 # not needed for orchestraion demo
 # mlflow.xgboost.autolog(disable=True)
 
+@task
 def train_best_model(train, valid, y_val, dv):
     with mlflow.start_run():
 
@@ -183,17 +185,20 @@ def train_best_model(train, valid, y_val, dv):
         mlflow.xgboost.log_model(booster, artifact_path="models_mlflow")
     
 # if __name__ == '__main__':
+@flow
 def main(train_path: str = '../data/green_tripdata_2021-01.parquet',
          val_path: str = '../data/green_tripdata_2021-02.parquet'):
+    
     mlflow.set_tracking_uri("sqlite:///mlflow.db")
     mlflow.set_experiment("nyc-taxi-experiment")
-    
+    X_train = read_dataframe(train_path)
+    X_val = read_dataframe(val_path)
     # consolidating the code where we invoke our newly defined functions
-    X_train, X_val, y_train, y_val, dv = add_features(train_path, val_path)
+    X_train, X_val, y_train, y_val, dv = add_features(X_train, X_val).result()
 
     train = xgb.DMatrix(X_train, label=y_train)
     valid = xgb.DMatrix(X_val, label=y_val)    
-    train_model_search(train, valid, y_val)
+    # train_model_search(train, valid, y_val)
     train_best_model(train, valid, y_val, dv)
     
 main()

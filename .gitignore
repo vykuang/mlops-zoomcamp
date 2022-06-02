@@ -1,6 +1,7 @@
 # data files
 *.parquet
 *.csv
+pref*.txt
 
 # pickles
 *.pkl
