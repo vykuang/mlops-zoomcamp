@@ -201,4 +201,19 @@ def main(train_path: str = '../data/green_tripdata_2021-01.parquet',
     # train_model_search(train, valid, y_val)
     train_best_model(train, valid, y_val, dv)
     
-main()
+# changing from a script run on terminal to a prefect deployment
+from prefect.deployments import DeploymentSpec
+from prefect.orion.schemas.schedules import IntervalSchedule
+from prefect.flow_runners import SubprocessFlowRunner
+from datetime import timedelta
+
+DeploymentSpec(
+    # the main func we defined above
+    flow=main,
+    name='model_training',
+    schedule=IntervalSchedule(interval=timedelta(minutes=5)),
+    # below is to run specifically on local storage
+    # if not specified, default is universal
+    # flow_runner=SubprocessFlowRunner(),
+    tags=['ml']
+)
