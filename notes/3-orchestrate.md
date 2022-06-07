@@ -306,7 +306,9 @@ We can then run our `@flow` decorated `prefect_flow.py` and observe the flow and
 
 ## Deployment
 ### Storage
-Flows need to be serialized and stored at some location for the scheduler to execute. Thus the storage needs to be defined. Local directory can be used, or a cloud bucket. The storage is defined on the ~~Prefect Server~~ flow execution environment.
+Flows need to be serialized and stored at some location for the scheduler to execute. Thus the storage needs to be defined. Local directory can be used, or a cloud bucket. The storage is defined on the ~~Prefect Server~~ flow execution environment. 
+
+These can only be set *once the PREFECT_API_URL is set up and running*. Otherwise the `httpx` module will raise connection errors.
 
 2. `prefect storage ls` to show current configured storage options
 3. `prefect storage create` to connect it to our bucket of choice

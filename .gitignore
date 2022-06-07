@@ -7,12 +7,17 @@ pref*.txt
 
 # pickles
 *.pkl
+*.bin
+*.b
+
 
 # folders
 data/
 output/
 mlruns/
+models/
 
 # metainfo
 .ipynb_checkpoints
 .obsidian/
+.env

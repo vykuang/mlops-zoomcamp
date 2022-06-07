@@ -1,6 +1,7 @@
 import pandas as pd
 import datetime
 from pathlib import Path
+import pickle
 
 from sklearn.feature_extraction import DictVectorizer
 from sklearn.linear_model import LinearRegression
@@ -11,7 +12,8 @@ from prefect.task_runners import SequentialTaskRunner
 
 # changing from a script run on terminal to a prefect deployment
 from prefect.deployments import DeploymentSpec
-from prefect.orion.schemas.schedules import IntervalSchedule
+# from prefect.orion.schemas.schedules import IntervalSchedule
+from prefect.orion.schemas.schedules import CronSchedule
 from prefect.flow_runners import SubprocessFlowRunner
 from datetime import timedelta
 
@@ -116,12 +118,12 @@ def run_model(df, categorical, dv, lr):
     logger.info(f"The MSE of validation is: {mse}")
     return
 
-
 @flow(task_runner=SequentialTaskRunner())
-def main(date=None,
+def main(output_path: str = './models/',
+         date: str = None,         
         #  train_path: str = '../data/fhv_tripdata_2021-01.parquet', 
         #  val_path: str = '../data/fhv_tripdata_2021-02.parquet',
-         ):
+    ):
 
     categorical = ['PUlocationID', 'DOlocationID']
 
@@ -136,30 +138,59 @@ def main(date=None,
     df_val_processed = prepare_features(df_val, categorical, False).result()
 
     # train the model
+    # add .result() to prevent 
+    # TypeError: cannot unpack non-iterable PrefectFuture object
     lr, dv = train_model(df_train_processed, categorical).result()
+
+    # Q3 - pickling our model and dv obj within the main flow
+    # use model-{yyyy-mm-dd}.bin and dv-{yyyy-mm-dd}.pkl format
+    output_path = Path(output_path)
+    if not output_path.exists():
+        Path.mkdir(output_path)
+
+    # dv.bin sized at 13,191 bytes
+    with open(output_path / f'model-{date}.bin', 'wb') as model_out, \
+         open(output_path / f'dv-{date}.bin', 'wb') as dv_out:
+        pickle.dump(lr, model_out)
+        pickle.dump(dv, dv_out)
+
     run_model(df_val_processed, categorical, dv, lr)
 
 # Q2 - passing 2021-08-15 as date
 # validation MSE was 11.637
-import argparse
-if __name__ == '__main__':
-    """Ran flow in CLI for the Q1-3"""
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '--date',
-        default='',
-        help='Date in yyyy-mm-dd format for which to make the trip duration prediction',
-    )
-    args = parser.parse_args()
-    main(args.date)
+# import argparse
+# if __name__ == '__main__':
+#     """Ran flow in CLI for the Q1-3"""
+#     parser = argparse.ArgumentParser()
+#     parser.add_argument(
+#         '--output_path', '-o',
+#         default='~/mlops-notes/w3-prefect/models/',
+#         help='Output folder to store the serialized model and input transformer',
+#     )    
+#     parser.add_argument(
+#         '--date', '-d',
+#         default='',
+#         help='Date in yyyy-mm-dd format for which to make the trip duration prediction',
+#     )    
+#     args = parser.parse_args()
+#     main(args.output_path, args.date)
 
-# DeploymentSpec(
-#     # the main func we defined above
-#     flow=main,
-#     name='model_training',
-#     schedule=IntervalSchedule(interval=timedelta(minutes=60)),
-#     # below is to run specifically on local storage
-#     # if not specified, default is universal
-#     # flow_runner=SubprocessFlowRunner(),
-#     tags=['ml']
-# )
+# Q5 after removing view filters, prefect has three (3) scheduled runs
+DeploymentSpec(
+    # the main func we defined above
+    flow=main,
+    name='model_training',
+    # Q4: 9:00 AM, every 15th
+    schedule=CronSchedule(
+        # format: 'min h d_of_m mth d_of_w'
+        cron='0 9 15 * *',
+        timezone='America/New_York',
+        ),
+    # below is to run specifically on local storage
+    # if not specified, default is universal
+    flow_runner=SubprocessFlowRunner(),
+    tags=['ml']
+)
+
+# After creating work-queue via web UI, view list of work-queues
+# on CLI with prefect work-queue ls
