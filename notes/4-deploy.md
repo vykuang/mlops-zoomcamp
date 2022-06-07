@@ -11,8 +11,6 @@ Model could regularly pull data from DB, run model, evaluate
 * Customer churn could be on a monthly basis
 * Ride duration may be require half-hour update basis, so customers have a semi-up to date information on whether they should bother.
 
-
-
 Usually 1 to 1 client-server relationship
 
 ### Web service
@@ -25,8 +23,6 @@ Once a ride has started, data could be streamed to multiple services:
 
 1. Tip prediction
 2. ride duration (more accurate version using more finely grained data)
-
-
 
 Another example with video streaming, in particular content moderation. User uploading a video is an event in a streaming pipeline that could trigger the following services:
 
