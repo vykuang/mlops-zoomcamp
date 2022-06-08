@@ -15,6 +15,8 @@ Usually 1 to 1 client-server relationship
 
 ### Web service
 
+Flask and Docker
+
 ### Streaming
 
 Typically 1-to-many relation between pipeline and data consumer
@@ -33,3 +35,41 @@ Another example with video streaming, in particular content moderation. User upl
 Decisions from each of those services could stream to another pipeline, consumed by a centralized decision service.
 
 Services could be added above that also feeds into the centralized decision service, to provide another point of data on whether the video should be removed or not.
+
+## Web services - Deployment with Flask and Docker
+
+To build our docker image, use `pipenv` to get the requirements list and create the venv. Can be used inside `conda` environment if we specify the python to be the one used by the conda env.
+
+Or more simply just specify which python version we want, and it'll grab the bin and store it in the .virtualenv directory:
+
+```bash
+cd ~/<project_dir>
+pipenv install scikit-learn==1.0.2 flask --python=3.9
+# venv and pipfile is created
+
+# activates venv
+pipenv shell
+
+# view installed dependencies
+deploy$ pipenv graph
+Flask==2.1.2
+  - click [required: >=8.0, installed: 8.1.3]
+  - importlib-metadata [required: >=3.6.0, installed: 4.11.4]
+    - zipp [required: >=0.5, installed: 3.8.0]
+  - itsdangerous [required: >=2.0, installed: 2.1.2]
+  - Jinja2 [required: >=3.0, installed: 3.1.2]
+    - MarkupSafe [required: >=2.0, installed: 2.1.1]
+  - Werkzeug [required: >=2.0, installed: 2.1.2]
+scikit-learn==1.0.2
+  - joblib [required: >=0.11, installed: 1.1.0]
+  - numpy [required: >=1.14.6, installed: 1.22.4]
+  - scipy [required: >=1.1.0, installed: 1.8.1]
+    - numpy [required: >=1.17.3,<1.25.0, installed: 1.22.4]
+  - threadpoolctl [required: >=2.0.0, installed: 3.1.0]
+
+# where's our venv?
+deploy$ which python
+/home/kohada/.local/share/virtualenvs/w4-deployment-xcyXzTh1/bin/python
+```
+
+Great. Don't think we'll actually get to use this venv; we just need the pipfile and pipfile.lock to import into our docker image for production I think.
