@@ -73,3 +73,75 @@ deploy$ which python
 ```
 
 Great. Don't think we'll actually get to use this venv; we just need the pipfile and pipfile.lock to import into our docker image for production I think.
+
+### Isolating environment with docker
+
+So far our app needs 
+
+* flask for the web app, and 
+* sklearn for the actual prediction
+
+But also, requests for testing, so we'll install as a dev package by `pipenv install --dev requests`. This way, requests won't be in the production env. Our Pipfile now looks like:
+
+```Pipfile
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+scikit-learn = "==1.0.2"
+flask = "*"
+gunicorn = "*"
+
+[dev-packages]
+requests = "*"
+
+[requires]
+python_version = "3.9"
+```
+
+To get that venv onto a container and run our `predict.py` app, run this Dockerfile
+
+```docker
+FROM python:3.9-slim
+
+# gets the latest pip
+RUN pip install --upgrade pip
+
+# to use our Pipfile and Pipfile.lock
+RUN pip install pipenv
+
+# './' below is relative to our WORKDIR
+WORKDIR /app
+
+# need to use double quotes
+# For > 2 args, all args are considered files except
+# for the last, which will be the destination folder
+COPY [ "Pipfile", "Pipfile.lock", "./"]
+
+# no need to create a venv inside a docker container 
+# for this case
+# deploy enforces that pipfile.lock is up-to-date
+# otherwise it fails the build, instead of generating a new one
+RUN pipenv install --system --deploy
+
+COPY [ "predict.py", "lin_reg.bin", "./" ]
+
+EXPOSE 9696
+
+ENTRYPOINT [ "gunicorn", "--bind", "0.0.0.0:9696", "predict:app"]
+```
+
+Build with `docker build -t duration-prediction-webapp:v1 .`; don't forget the `.` to denote that the Dockerfile is in current directory.
+
+Run with `docker run -it --rm -p 9696:9696 duration-prediction-we
+bapp:v1`
+
+Test with the same `python test_predict.py` and it should return the same JSON.
+
+## Web services with MLflow
+
+Our previous container copied the model directly from directory. Now let's integrate with MLflow so we can grab `production` grade trained model from the MLflow registry.
+
+
