@@ -21,3 +21,4 @@ models/
 .ipynb_checkpoints
 .obsidian/
 .env
+__pycache__/

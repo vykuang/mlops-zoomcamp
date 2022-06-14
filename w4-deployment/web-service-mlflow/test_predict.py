@@ -1,5 +1,5 @@
 import requests
-import predict
+
 # sample data
 ride = {
     "PULocationID": 10,
