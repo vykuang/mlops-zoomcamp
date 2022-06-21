@@ -12,12 +12,16 @@ def load_pickle(filename: str):
         return pickle.load(f_in)
 
 
-def run(data_path):
+def run(data_path, tracking_uri):
 
     X_train, y_train = load_pickle(os.path.join(data_path, "train.pkl"))
     X_valid, y_valid = load_pickle(os.path.join(data_path, "valid.pkl"))
 
-    mlflow.set_tracking_uri("sqlite:///mlflow.db")
+    if tracking_uri:
+        mlflow.set_tracking_uri(tracking_uri)
+    else:
+        mlflow.set_tracking_uri("sqlite:///mlflow.db")
+
     mlflow.set_experiment("nyc-taxi-experiment")
     
     mlflow.sklearn.autolog()
@@ -36,9 +40,14 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--data_path",
-        default="./output",
+        default="../data/output",
         help="the location where the processed NYC taxi trip data was saved."
+    )
+    parser.add_argument(
+        "--tracking_uri", "-t",
+        default=None,
+        help="Host:port if remote; leave none for local mlflow.db file"
     )
     args = parser.parse_args()
 
-    run(args.data_path)
+    run(args.data_path, args.tracking_uri)

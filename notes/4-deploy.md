@@ -144,4 +144,77 @@ Test with the same `python test_predict.py` and it should return the same JSON.
 
 Our previous container copied the model directly from directory. Now let's integrate with MLflow so we can grab `production` grade trained model from the MLflow registry.
 
+### Set up the MLflow components on AWS
 
+#### Create IAM role with access to S3 and RDS
+
+IAM > Users > create (name as mlflow-admin) > select policies:
+
+1. S3 FULL ACCESS
+2. RDS FULL ACCESS
+
+I created a group with those two policies. :/
+
+* key ID - `AKIAX4LVDQWJ6N4RSKM2`
+* secret key - `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`
+
+In the EC2 instance (assuming AMI image, otherwise need `sudo yum install awscli`), enter the role's auth info with `aws configure`
+
+#### registry on S3 bucket
+
+Before we can pull the model from registry, let's build the registry first. We'll use the notebook from week 2, but this time we'll set the artifact store to our cloud bucket.
+
+* name - `mlflow-artifact-remote-1212`
+* region - `ap-southeast1`
+
+Confirm access with `aws s3 ls` to list buckets and 
+
+#### backend on RDS (postgres)
+
+RDS > create database > postgresql > FREE TIER!!!
+
+* NAME - `mlflow-backend`
+* master user - `mlflow`
+* pw - `32etqvogXjb7dcbX1su9` (auto-generated)
+* endpoint - `mlflow-backend-remote.cspfunjl7cni.ap-southeast-1.rds.amazonaws.com`
+
+Once 
+
+[Doc on connecting](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/CHAP_CommonTasks.Connect.html)
+
+#### Setup tracking server on EC2
+
+On the clean instance, run
+
+```bash
+sudo yum update
+pip3 install mlflow boto3 psycopg2-binary
+# enter the role access key ID/secret access for the role
+# with the necessary permissions (re: S3 and RDS)
+aws configure 
+# start instance, if env vars are set
+mlflow server -h 0.0.0.0 -p 5000 --backend-store-uri postgresql://${MLFLOW_DB_USER}:${MLFLOW_DB_PASSWORD}@${MLFLOW_DB_ENDPOINT}:5432/${MLFLOW_DB_NAME} --default-artifact-root s3://${MLFLOW_BUCKET}
+
+## plain text version
+mlflow server -h 0.0.0.0 -p 5000 \
+  --backend-store-uri postgresql://mlflow:32etqvogXjb7dcbX1su9@mlflow-backend-remote.cspfunjl7cni.ap-southeast-1.rds.amazonaws.com:5432/mlflow_db \
+  --default-artifact-root s3://mlflow-artifacts-remote-1212
+```
+
+Maybe put the auth stuff in `.env` and `source .env` to use them as shell variables.
+
+When running `train.py` to access the remote tracking server, ran into this error: `WARNING mlflow.utils.autologging_utils: Encountered unexpected error during sklearn autologging: Unable to locate credentials`. 
+
+Resolution: Include AWS credentials to localhost machine. Even though the remote tracking server already has that info, the localhost also needs to contact the remote artifact store (S3) per this schematic:
+
+![mlflow scenario 4](./img/scenario_4.png)
+
+Two ways to store AWS credential to access S3 artifact store [per aws documentation](https://docs.aws.amazon.com/sdk-for-java/latest/developer-guide/setup.html#setup-credentials):
+
+1. store in `~/.aws/credentials` 
+2. `export AWS_ACCESS_KEY_ID=key_id_here AWS_SECRET_ACCESS_KEY=secret_here`
+3. env vars are prioritized before `credentials` file
+
+Alternatively, we can avoid having end-user (me) needing to manage artifact via scenario 5: MLflow Tracking Server enabled with proxied artifact storage access. This must be set when starting the server with `mlflow server --backend-store-uri postgresql://URI --artifacts-destination s3://bucket_name/mlartifacts --serve-artifacts --host ...` 
+
+Going further along this vein, if we only need the tracking server to serve artifacts, and not log any additional training (i.e. for deployment purposes), we can start the MLflow server via `--artifacts-only` flag which disables all Tracking Server functionality. Again this decouples the user from credential management. [Scenario 6 in MLflow docs](https://www.mlflow.org/docs/latest/tracking.html#id33)

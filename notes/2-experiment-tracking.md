@@ -159,6 +159,7 @@ Three scenarios:
 	2. Remote tracking and remote registry server
 
 ### Configuring MLflow
+
 * backend
 	* `--backend-store-uri`
 	* local filesystem (default)
