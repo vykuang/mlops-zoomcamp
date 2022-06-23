@@ -153,10 +153,7 @@ IAM > Users > create (name as mlflow-admin) > select policies:
 1. S3 FULL ACCESS
 2. RDS FULL ACCESS
 
-I created a group with those two policies. :/
-
-* key ID - `AKIAX4LVDQWJ6N4RSKM2`
-* secret key - `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`
+I created a group with those two policies.
 
 In the EC2 instance (assuming AMI image, otherwise need `sudo yum install awscli`), enter the role's auth info with `aws configure`
 
@@ -172,11 +169,6 @@ Confirm access with `aws s3 ls` to list buckets and
 #### backend on RDS (postgres)
 
 RDS > create database > postgresql > FREE TIER!!!
-
-* NAME - `mlflow-backend`
-* master user - `mlflow`
-* pw - `32etqvogXjb7dcbX1su9` (auto-generated)
-* endpoint - `mlflow-backend-remote.cspfunjl7cni.ap-southeast-1.rds.amazonaws.com`
 
 Once 
 
@@ -214,7 +206,14 @@ Two ways to store AWS credential to access S3 artifact store [per aws documentat
 1. store in `~/.aws/credentials` 
 2. `export AWS_ACCESS_KEY_ID=key_id_here AWS_SECRET_ACCESS_KEY=secret_here`
 3. env vars are prioritized before `credentials` file
+  * `unset` can clear environment vars
 
 Alternatively, we can avoid having end-user (me) needing to manage artifact via scenario 5: MLflow Tracking Server enabled with proxied artifact storage access. This must be set when starting the server with `mlflow server --backend-store-uri postgresql://URI --artifacts-destination s3://bucket_name/mlartifacts --serve-artifacts --host ...` 
 
 Going further along this vein, if we only need the tracking server to serve artifacts, and not log any additional training (i.e. for deployment purposes), we can start the MLflow server via `--artifacts-only` flag which disables all Tracking Server functionality. Again this decouples the user from credential management. [Scenario 6 in MLflow docs](https://www.mlflow.org/docs/latest/tracking.html#id33)
+
+Access with `http://13.215.46.159:5000/`
+
+#### Register top model
+
+### Retrieve model from MLflow registry instead
