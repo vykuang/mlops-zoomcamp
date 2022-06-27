@@ -20,7 +20,7 @@ COPY [ "Pipfile", "Pipfile.lock", "./"]
 # otherwise it fails the build, instead of generating a new one
 RUN pipenv install --system --deploy
 
-COPY [ "predict.py", "lin_reg.bin", "./" ]
+COPY [ "predict.py", "./" ]
 
 EXPOSE 9696
 

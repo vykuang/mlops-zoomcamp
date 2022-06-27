@@ -11,39 +11,31 @@ from mlflow.tracking import MlflowClient
 # MLFLOW_TRACKING_URI = 'http://13.215.46.159:5000/'
 # how do I parametrize this when running from CLI?
 TRACKING_IP = '13.215.46.159'
-EXP_NAME = 'nyc-taxi-experiment'
-RUN_ID = '8fa4fdbc841b4a0e9a2670080dbeabd4'
+EXP_NAME = 'green-taxi-duration'
+RUN_ID = '815e49bd6e69425d977f2042f7f74c97'
 
-# Read from model registry instead of local dir
-# with open('lin_reg.bin', 'rb') as f_in:
-#     (dv, model) = pickle.load(f_in)
 
 def prepare_features(ride):
+    print('prpepping features')
     features = {}
     features['PU_DO'] = f"{ride['PULocationID']}_{ride['DOLocationID']}"
     features['trip_distance'] = ride['trip_distance']
     return features
 
-def predict(features, dv, name, stage):
-    X = dv.transform(features)
-    model_uri = f'models:/{RUN_ID}/model'
+def predict(features):
+    '''
+    Model is now a sklearn pipeline object which combines the dict_vect
+    as well as the random forest model
+    '''
+    
+    # full s3 path: s3://bucket_name/<exp_id>/run_id/artifacts/model
+    model_uri = f's3://mlflow-artifacts-remote-1212/3/{RUN_ID}/artifacts/model/'
+    print('loading model')
     model = mlflow.pyfunc.load_model(model_uri=model_uri)
-    preds = model.predict(X)
+    preds = model.predict(features)
     # casts from numpy to regular python type
     # to allow serialization
     return float(preds[0])
-
-def fetch_dv(client, run_id):
-    dst_path = './models/'
-    client.download_artifacts(
-        run_id=run_id, 
-        path='dict_vectorizer.bin',
-        dst_path=dst_path
-    )
-    logging.info(f'downloading dict vectorizer to {dst_path}')
-    with open('models/dict_vectorizer.bin', 'rb') as f_in:
-        dv = pickle.load(f_in)
-    return dv
 
 # name of our flask app
 app = Flask('duration-prediction')
@@ -59,19 +51,14 @@ def predict_endpoint():
     """
     # from the POST request
     ride = request.get_json()
+    print('received POST')
     logging.info('Received POST request')
 
-
-    
-    tracking_uri = f'http://{TRACKING_IP}/5000'
-    client = MlflowClient(tracking_uri=tracking_uri)
-    experiment = client.get_experiment_by_name(EXP_NAME)
-
-    dv = fetch_dv(client, run_id)
     features = prepare_features(ride)
     preds = predict(features)
     result = {
-        'duration': preds
+        'duration': preds,
+        'model_version': RUN_ID,
     }
 
     logging.info('Duration prediction made')
@@ -80,29 +67,6 @@ def predict_endpoint():
     return jsonify(result)
 
 if __name__ == '__main__':
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument(
-    #     '--host', '-h',
-    #     default='0.0.0.0',
-    #     help='IP to host the prediction app; defaults to 0.0.0.0',
-    # )
-    # parser.add_argument(
-    #     '--port', '-p',
-    #     default=9696,
-    #     type=int,
-    #     help='Port exposed for prediction app; defaults to 9696',
-    # )
-    # parser.add_argument(
-    #     '--mlflow_ip', '-m',
-    #     type=string,
-    #     default='13.215.46.159',
-    #     help='IP address of MLflow tracking server from which to pull the model',
-    # )
-    # args = parser.parse_args()
-    # app.run(args.host, # expose port on all interfaces
-    #         args.port,
-    #         args.mlflow_ip,
-    #         debug=True, 
     app.run(
         debug=True,
         host='0.0.0.0',

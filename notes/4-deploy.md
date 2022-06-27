@@ -135,8 +135,7 @@ ENTRYPOINT [ "gunicorn", "--bind", "0.0.0.0:9696", "predict:app"]
 
 Build with `docker build -t duration-prediction-webapp:v1 .`; don't forget the `.` to denote that the Dockerfile is in current directory.
 
-Run with `docker run -it --rm -p 9696:9696 duration-prediction-we
-bapp:v1`
+Run with `docker run -it --rm -p 9696:9696 duration-prediction-webapp:v1`
 
 Test with the same `python test_predict.py` and it should return the same JSON.
 
@@ -207,6 +206,11 @@ Two ways to store AWS credential to access S3 artifact store [per aws documentat
 2. `export AWS_ACCESS_KEY_ID=key_id_here AWS_SECRET_ACCESS_KEY=secret_here`
 3. env vars are prioritized before `credentials` file
   * `unset` can clear environment vars
+  * Notebook inside vs code curiously held my previous access key, even though the credentials file had the correct pair. Even when I used `echo $AWS_SECRET_ACCESS_KEY` within the VS terminal, the correct one came out. Even after installing awscli, the notebook still retained the previous one. Use unset.
+  * Still giving `S3UploadFailedError`
+  * Add `region = ca-central-1` in credentials
+  * NO dice
+  * The jupyter environment inside VS is somehow not recognize any of the env variables, even after setting `os.environ['KEY'] = value`. Works when I migrated the code to `rf.py`
 
 Alternatively, we can avoid having end-user (me) needing to manage artifact via scenario 5: MLflow Tracking Server enabled with proxied artifact storage access. This must be set when starting the server with `mlflow server --backend-store-uri postgresql://URI --artifacts-destination s3://bucket_name/mlartifacts --serve-artifacts --host ...` 
 
@@ -216,4 +220,15 @@ Access with `http://13.215.46.159:5000/`
 
 #### Register top model
 
+
 ### Retrieve model from MLflow registry instead
+
+Run `rf.py` to log the pipeline (dict vect + random forest model) onto the S3 bucket for our predict app to retrieve
+
+Use the full S3 path given on the artifacts page.
+
+The container must also have the aws credential in order to access the S3 path. Couple options:
+
+1. Mount the ~/.aws/ directory as a volume: `docker ... -v /home/user/.aws:/root/.aws`
+2. Pass as .env inside Dockerfile
+
