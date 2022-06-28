@@ -17,8 +17,10 @@ from sklearn.pipeline import make_pipeline
 import mlflow
 
 # Use .env to parametrize our script
-RUN_ID = os.getenv(key='RUN_ID', default='815e49bd6e69425d977f2042f7f74c97')
+# RUN_ID = os.getenv(key='RUN_ID', default='815e49bd6e69425d977f2042f7f74c97')
 MLFLOW_HOST = os.getenv(key='MLFLOW_HOST', default='13.215.46.159')
+EVAL_S3_STORE = os.getenv(key='EVAL_S3_STORE', 
+                          default='s3://nyc-duration-predict-vk')
 
 MLFLOW_URI = f'http://{MLFLOW_HOST}:5000'
 mlflow.set_tracking_uri(MLFLOW_URI)
@@ -53,8 +55,8 @@ def prepare_dictionaries(df: pd.DataFrame):
     return dicts
 
 def apply_model(input_file, run_id, output_file):
-    df = read_dataframe('../../data/green_tripdata_2021-01.parquet')
-    # df = read_dataframe(input_file)
+    # df = read_dataframe('../../data/green_tripdata_2021-01.parquet')
+    df = read_dataframe(input_file)
 
     # applying model, not training
     # df_val = read_dataframe('../../data/green_tripdata_2021-02.parquet')
@@ -79,25 +81,6 @@ def apply_model(input_file, run_id, output_file):
     df_result['model_version'] = run_id
     
     df_result.to_parquet(output_file, index=False)
-
-    # with mlflow.start_run():
-    #     params = dict(max_depth=20, n_estimators=100, min_samples_leaf=10, random_state=0)
-    #     mlflow.log_params(params)
-
-    #     # use pipeline to combine dict_vect and model into one object
-    #     pipeline = make_pipeline(
-    #         DictVectorizer(),
-    #         RandomForestRegressor(**params, n_jobs=-1)
-    #     )
-
-    #     pipeline.predict(dicts)
-    #     y_pred = pipeline.predict(dict_val)
-
-    #     rmse = mean_squared_error(y_pred, y_val, squared=False)
-    #     print(params, rmse)
-    #     mlflow.log_metric('rmse', rmse)
-
-    #     mlflow.sklearn.log_model(pipeline, artifact_path="model")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -126,7 +109,8 @@ if __name__ == '__main__':
     if not os.path.exists('./output'):
         os.mkdir('./output')
         
-    output_file = f'./output/{args.taxi_type}-{args.year:04d}-{args.month:02d}.parquet'
+    # output_file = f'./output/{args.taxi_type}-{args.year:04d}-{args.month:02d}.parquet'
+    output_file = f'{EVAL_S3_STORE}/{args.taxi_type}_tripdata_{args.year:04d}-{args.month:02d}.parquet'
     apply_model(input_file=input_file,
                 run_id=args.run_id,
                 output_file=output_file)

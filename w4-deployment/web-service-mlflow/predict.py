@@ -16,7 +16,7 @@ RUN_ID = '815e49bd6e69425d977f2042f7f74c97'
 
 
 def prepare_features(ride):
-    print('prpepping features')
+    print('prepping features')
     features = {}
     features['PU_DO'] = f"{ride['PULocationID']}_{ride['DOLocationID']}"
     features['trip_distance'] = ride['trip_distance']
@@ -27,7 +27,7 @@ def predict(features):
     Model is now a sklearn pipeline object which combines the dict_vect
     as well as the random forest model
     '''
-    
+
     # full s3 path: s3://bucket_name/<exp_id>/run_id/artifacts/model
     model_uri = f's3://mlflow-artifacts-remote-1212/3/{RUN_ID}/artifacts/model/'
     print('loading model')
