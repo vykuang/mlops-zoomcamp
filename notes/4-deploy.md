@@ -220,7 +220,6 @@ Access with `http://13.215.46.159:5000/`
 
 #### Register top model
 
-
 ### Retrieve model from MLflow registry instead
 
 Run `rf.py` to log the pipeline (dict vect + random forest model) onto the S3 bucket for our predict app to retrieve
@@ -232,3 +231,29 @@ The container must also have the aws credential in order to access the S3 path. 
 1. Mount the ~/.aws/ directory as a volume: `docker ... -v /home/user/.aws:/root/.aws`
 2. Pass as .env inside Dockerfile
 
+## Streaming: Deployment with Kinesis and Lambda
+
+Kinesis is AWS' answer to streaming data processing; similar to Apache kafka, they are both **data ingest frameworks** prioritizing durability, reliability, and scalability. GCP's equivalent is *Pub/Sub*.
+
+Key differences
+
+1. Kafka is open-source, first developed at LinkedIn. Kinesis is managed.
+    * Users are responsible for installing and managing clusters
+    * Managed means that users pay for a fully set up cluster. Less overhead
+2. Cost can vary wildly due to the fact that Kafka needs to be set up, and thus requires DevOps and resource costs (e.g. EC2 instances to run Kafka). Even though there's a greater upfront fee associated with Kinesis it may be more cost effective due to minimal DevOps/resource being used to maintain it
+3. Kinesis auto-scales capacity.
+4. Some API differences re: last message
+
+[Official tutorial from AWS on kinesis and lambda](https://docs.amazonaws.cn/en_us/lambda/latest/dg/with-kinesis-example.html)
+
+[Tutorial for just lambda](https://docs.amazonaws.cn/en_us/lambda/latest/dg/getting-started.html#getting-started-create-function)
+
+Lambda is equiv to GCP's cloud functions - run code without servers
+
+### Context
+
+In context of our ride duration prediction, perhaps we use an older, batch-trained model for the initial estimate, and we stream real time predictions using a more advanced model but more selectively to conserve resources.
+
+### Create Role in IAM
+
+To run the lambda code, it needs a role attached to it, with proper permissions to access AWS resources.

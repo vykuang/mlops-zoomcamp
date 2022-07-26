@@ -9,6 +9,7 @@ pref*.txt
 *.pkl
 *.bin
 *.b
+*.bak
 
 
 # folders
@@ -16,9 +17,14 @@ data/
 output/
 mlruns/
 models/
+volume/
 
 # metainfo
 .ipynb_checkpoints
 .obsidian/
 .env
+.vscode/
+
+# pytest
+.pytest_cache/
 __pycache__/
