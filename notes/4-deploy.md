@@ -205,12 +205,12 @@ Two ways to store AWS credential to access S3 artifact store [per aws documentat
 1. store in `~/.aws/credentials` 
 2. `export AWS_ACCESS_KEY_ID=key_id_here AWS_SECRET_ACCESS_KEY=secret_here`
 3. env vars are prioritized before `credentials` file
-  * `unset` can clear environment vars
-  * Notebook inside vs code curiously held my previous access key, even though the credentials file had the correct pair. Even when I used `echo $AWS_SECRET_ACCESS_KEY` within the VS terminal, the correct one came out. Even after installing awscli, the notebook still retained the previous one. Use unset.
-  * Still giving `S3UploadFailedError`
-  * Add `region = ca-central-1` in credentials
-  * NO dice
-  * The jupyter environment inside VS is somehow not recognize any of the env variables, even after setting `os.environ['KEY'] = value`. Works when I migrated the code to `rf.py`
+   * `unset` can clear environment vars
+   * Notebook inside vs code curiously held my previous access key, even though the credentials file had the correct pair. Even when I used `echo $AWS_SECRET_ACCESS_KEY` within the VS terminal, the correct one came out. Even after installing awscli, the notebook still retained the previous one. Use unset.
+   * Still giving `S3UploadFailedError`
+   * Add `region = ca-central-1` in credentials
+   * NO dice
+   * The jupyter environment inside VS is somehow not recognize any of the env variables, even after setting `os.environ['KEY'] = value`. Works when I migrated the code to `rf.py`
 
 Alternatively, we can avoid having end-user (me) needing to manage artifact via scenario 5: MLflow Tracking Server enabled with proxied artifact storage access. This must be set when starting the server with `mlflow server --backend-store-uri postgresql://URI --artifacts-destination s3://bucket_name/mlartifacts --serve-artifacts --host ...` 
 
@@ -238,8 +238,8 @@ Kinesis is AWS' answer to streaming data processing; similar to Apache kafka, th
 Key differences
 
 1. Kafka is open-source, first developed at LinkedIn. Kinesis is managed.
-    * Users are responsible for installing and managing clusters
-    * Managed means that users pay for a fully set up cluster. Less overhead
+   * Users are responsible for installing and managing clusters
+   * Managed means that users pay for a fully set up cluster. Less overhead
 2. Cost can vary wildly due to the fact that Kafka needs to be set up, and thus requires DevOps and resource costs (e.g. EC2 instances to run Kafka). Even though there's a greater upfront fee associated with Kinesis it may be more cost effective due to minimal DevOps/resource being used to maintain it
 3. Kinesis auto-scales capacity.
 4. Some API differences re: last message
@@ -257,3 +257,37 @@ In context of our ride duration prediction, perhaps we use an older, batch-train
 ### Create Role in IAM
 
 To run the lambda code, it needs a role attached to it, with proper permissions to access AWS resources.
+
+* Create *Role*
+* Select *lambda* as use case, and search for *[AWSLambdaKinesisExecutionRole](https://us-east-1.console.aws.amazon.com/iam/home#/policies/arn:aws:iam::aws:policy/service-role/AWSLambdaKinesisExecutionRole)*
+  * Contains a set of permissions for our lambda (serverless code) to read kinesis streams
+  * and log to CloudWatch
+* name it `lambda-kinesis-role`
+
+### Create lambda function
+
+The lambda template:
+
+```python
+import json
+
+def lambda_handler(event, context):
+    # TODO implement
+    print(json.dumps(event))
+    return {
+        'statusCode': 200,
+        'body': json.dumps('Hello from Lambda!')
+    }
+```
+
+* `event` is the trigger
+  * contains the `json` data sent to the lambda function
+  * Test with a sample json with `json.dumps(event)`:
+  * ```json
+    {
+      "key1": "value1",
+      "key2": "value2",
+      "key3": "value3"
+    }
+    ```
+  * In order to test updated code, click DEPLOY; will not use new code otherwise
