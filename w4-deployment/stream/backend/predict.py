@@ -1,19 +1,39 @@
+import os
 import pickle
 # import argparse
 import logging
 # import string
+# allows os.getenv to use env vars defined in .env,
+# without them actually being exported in the environment
+from dotenv import load_dotenv
 
 from flask import Flask, request, jsonify
 
 import mlflow
 from mlflow.tracking import MlflowClient
 
+# pub client to send to a push topic that triggers a cloud function
+# as well as a sub client to receive func output from the pull topic
+from google.cloud import pubsub_v1
+
 # MLFLOW_TRACKING_URI = 'http://13.215.46.159:5000/'
 # how do I parametrize this when running from CLI?
-TRACKING_IP = '13.215.46.159'
-EXP_NAME = 'green-taxi-duration'
-RUN_ID = '815e49bd6e69425d977f2042f7f74c97'
+# include in a local .env for docker to COPY from?
+# use --env-file=.env in docker run
+# TRACKING_IP = '13.215.46.159'
+# EXP_NAME = 'green-taxi-duration'
+# RUN_ID = '815e49bd6e69425d977f2042f7f74c97'
+TRACKING_IP = os.getenv('TRACKING_IP')
+EXP_NAME = os.getenv('EXP_NAME')
+RUN_ID = os.getenv('RUN_ID')
 
+# pub/sub info
+PROJECT_ID = os.getenv('PROJECT_ID')
+PUBLISHER_TOPIC_NAME = os.getenv('BACKEND_PUSH_STREAM')
+SUBSCRIBER_ID = os.getenv('BACKEND_PULL_SUBSCRIBER_ID')
+
+publisher = pubsub_v1.PublisherClient()
+subscriber = pubsub_v1.SubscriberClient()
 
 def prepare_features(ride):
     print('prepping features')
@@ -36,6 +56,19 @@ def predict(features):
     # casts from numpy to regular python type
     # to allow serialization
     return float(preds[0])
+
+
+def send_to_stream(message_json):
+    message_bytes = message_json.encode("utf-8")
+
+    try:
+        publish_future = publisher.publish(publisher_path, data=message_bytes)
+        publish_future.result()
+
+        return "Message published."
+    except Exception as e:
+        print(e)
+        return (e, 500)
 
 # name of our flask app
 app = Flask('duration-prediction')
