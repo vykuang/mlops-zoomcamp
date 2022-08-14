@@ -291,3 +291,30 @@ def lambda_handler(event, context):
     }
     ```
   * In order to test updated code, click DEPLOY; will not use new code otherwise
+
+### Set up Kinesis
+
+**There is no free tier for AWS kinesis**
+
+1. via `awscli`: `aws kinesis create-stream --stream-name lambda-stream --shard-count 1`
+2. via UI: Kinesis - create data stream
+   1. provisioned mode
+   2. 1 provisioned shard
+
+## Setup GCP pub/sub
+
+Outline
+
+1. Create data stream (Topic) B to send data from backend to consumer. 
+2. Create the consumer function
+3. Deploy consumer function as google function (or AWS lambda???)
+4. Create Topic B to ingest output from the function
+5. Pull data from topic B to backend
+
+### IAM service account
+
+* Service account - name it `function-pubsub-role`
+* Roles:
+  * pub/sub service agent
+  * functions service agent
+* Add key and save the json for our terminal to use

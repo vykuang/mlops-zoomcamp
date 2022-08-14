@@ -4,6 +4,7 @@
 pref*.txt
 *.doc
 *.docx
+*.json
 
 # pickles
 *.pkl
