@@ -1,5 +1,5 @@
 import os
-import pickle
+import json
 # import argparse
 import logging
 # import string
@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 from flask import Flask, request, jsonify
 
 import mlflow
-from mlflow.tracking import MlflowClient
+# from mlflow.tracking import MlflowClient
 
 # pub client to send to a push topic that triggers a cloud function
 # as well as a sub client to receive func output from the pull topic
@@ -23,8 +23,15 @@ from google.cloud import pubsub_v1
 # TRACKING_IP = '13.215.46.159'
 # EXP_NAME = 'green-taxi-duration'
 # RUN_ID = '815e49bd6e69425d977f2042f7f74c97'
-TRACKING_IP = os.getenv('TRACKING_IP')
-EXP_NAME = os.getenv('EXP_NAME')
+
+dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
+load_dotenv(dotenv_path)
+
+# load env var from .env file as if it was actually EXPORTed
+# TRACKING_IP = os.getenv('TRACKING_IP')
+# EXP_NAME = os.getenv('EXP_NAME')
+
+# only RUN_ID necessary if we're pulling directly from S3
 RUN_ID = os.getenv('RUN_ID')
 
 # pub/sub info
@@ -34,6 +41,9 @@ SUBSCRIBER_ID = os.getenv('BACKEND_PULL_SUBSCRIBER_ID')
 
 publisher = pubsub_v1.PublisherClient()
 subscriber = pubsub_v1.SubscriberClient()
+
+publisher_path = publisher.topic_path(PROJECT_ID, PUBLISHER_TOPIC_NAME)
+subscriber_path = subscriber.topic_path(PROJECT_ID, SUBSCRIBER_ID)
 
 def prepare_features(ride):
     print('prepping features')
@@ -69,6 +79,27 @@ def send_to_stream(message_json):
     except Exception as e:
         print(e)
         return (e, 500)
+
+def receive():
+
+    response = subscriber.pull(
+        request={
+            'subscription': subscriber_path,
+            'max_messages': 1,
+        }
+    )
+
+    msg = response.received_messages[0]
+    ack_id = msg.ack_id
+    subscriber.acknowledge(
+        request={
+            'subscripiton': subscriber_path,
+            'ack_ids': [ack_id],
+        }
+    )
+    
+    data = json.loads(msg.message.data)
+    return data
 
 # name of our flask app
 app = Flask('duration-prediction')
