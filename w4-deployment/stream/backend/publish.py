@@ -4,6 +4,7 @@ Demo of loading our .env and sending a message to a push topic
 import os
 from pathlib import Path
 import json
+from datetime import datetime
 from dotenv import load_dotenv
 from google.cloud import pubsub_v1
 
@@ -33,10 +34,10 @@ def send_to_stream(message_json):
 
 if __name__ == '__main__':
     ride = {
-        'datetime':'2022-08-23 11:36:42',
+        'datetime':f'{datetime.now()}',
         'PULocationID': 34,
         'DOLocationID': 56,
-        'trip_distance': 15
+        'trip_distance': 55
     }
     
     send_to_stream(json.dumps(ride))
