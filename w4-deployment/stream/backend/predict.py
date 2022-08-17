@@ -6,6 +6,7 @@ import logging
 # allows os.getenv to use env vars defined in .env,
 # without them actually being exported in the environment
 from dotenv import load_dotenv
+from pathlib import Path
 
 from flask import Flask, request, jsonify
 
@@ -24,7 +25,8 @@ from google.cloud import pubsub_v1
 # EXP_NAME = 'green-taxi-duration'
 # RUN_ID = '815e49bd6e69425d977f2042f7f74c97'
 
-dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
+# dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
+dotenv_path = Path(__file__).resolve().parents[1] / '.env'
 load_dotenv(dotenv_path)
 
 # load env var from .env file as if it was actually EXPORTed
@@ -43,7 +45,7 @@ publisher = pubsub_v1.PublisherClient()
 subscriber = pubsub_v1.SubscriberClient()
 
 publisher_path = publisher.topic_path(PROJECT_ID, PUBLISHER_TOPIC_NAME)
-subscriber_path = subscriber.topic_path(PROJECT_ID, SUBSCRIBER_ID)
+subscriber_path = subscriber.subscription_path(PROJECT_ID, SUBSCRIBER_ID)
 
 def prepare_features(ride):
     print('prepping features')
@@ -93,7 +95,7 @@ def receive():
     ack_id = msg.ack_id
     subscriber.acknowledge(
         request={
-            'subscripiton': subscriber_path,
+            'subscription': subscriber_path,
             'ack_ids': [ack_id],
         }
     )
@@ -118,10 +120,21 @@ def predict_endpoint():
     print('received POST')
     logging.info('Received POST request')
 
+
     features = prepare_features(ride)
     preds = predict(features)
+    logging.info('Received prediction')
+
+    logging.info('Sending data to pubsub')
+    send_to_stream(json.dumps(ride))
+
+    duration_stream = receive()['duration_final']
+    logging.info('Received prediction from pubsub')
+
     result = {
-        'duration': preds,
+        'datetime': ride['datetime'],
+        'duration_init': preds,
+        'duration_final': duration_stream,
         'model_version': RUN_ID,
     }
 

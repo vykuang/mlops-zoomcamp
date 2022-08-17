@@ -1,10 +1,13 @@
 import requests
+from datetime import datetime
 
 # sample data
 ride = {
+    # put into string allows JSON serializable
+    'datetime': f'{datetime.now()}', 
     "PULocationID": 10,
     "DOLocationID": 50,
-    "trip_distance": 40
+    "trip_distance": 10,
 }
 
 # testing locally without web service

@@ -34,7 +34,7 @@ def send_to_stream(message_json):
 
 if __name__ == '__main__':
     ride = {
-        'datetime':f'{datetime.now()}',
+        'datetime': f'{datetime.now()}',
         'PULocationID': 34,
         'DOLocationID': 56,
         'trip_distance': 55
