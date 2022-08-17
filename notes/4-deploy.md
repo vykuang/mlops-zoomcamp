@@ -303,6 +303,8 @@ def lambda_handler(event, context):
 
 ## Setup GCP pub/sub
 
+35.223.73.40
+
 Outline
 
 1. Create data stream (Topic) B to send data from backend to consumer. 
