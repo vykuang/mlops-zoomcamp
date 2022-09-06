@@ -76,9 +76,9 @@ Great. Don't think we'll actually get to use this venv; we just need the pipfile
 
 ### Isolating environment with docker
 
-So far our app needs 
+So far our app needs
 
-* flask for the web app, and 
+* flask for the web app, and
 * sklearn for the actual prediction
 
 But also, requests for testing, so we'll install as a dev package by `pipenv install --dev requests`. This way, requests won't be in the production env. Our Pipfile now looks like:
@@ -120,7 +120,7 @@ WORKDIR /app
 # for the last, which will be the destination folder
 COPY [ "Pipfile", "Pipfile.lock", "./"]
 
-# no need to create a venv inside a docker container 
+# no need to create a venv inside a docker container
 # for this case
 # deploy enforces that pipfile.lock is up-to-date
 # otherwise it fails the build, instead of generating a new one
@@ -163,13 +163,13 @@ Before we can pull the model from registry, let's build the registry first. We'l
 * name - `mlflow-artifact-remote-1212`
 * region - `ap-southeast1`
 
-Confirm access with `aws s3 ls` to list buckets and 
+Confirm access with `aws s3 ls` to list buckets and
 
 #### backend on RDS (postgres)
 
 RDS > create database > postgresql > FREE TIER!!!
 
-Once 
+Once
 
 [Doc on connecting](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/CHAP_CommonTasks.Connect.html)
 
@@ -182,19 +182,18 @@ sudo yum update
 pip3 install mlflow boto3 psycopg2-binary
 # enter the role access key ID/secret access for the role
 # with the necessary permissions (re: S3 and RDS)
-aws configure 
+aws configure
 # start instance, if env vars are set
-mlflow server -h 0.0.0.0 -p 5000 --backend-store-uri postgresql://${MLFLOW_DB_USER}:${MLFLOW_DB_PASSWORD}@${MLFLOW_DB_ENDPOINT}:5432/${MLFLOW_DB_NAME} --default-artifact-root s3://${MLFLOW_BUCKET}
-
-## plain text version
-mlflow server -h 0.0.0.0 -p 5000 \
-  --backend-store-uri postgresql://mlflow:32etqvogXjb7dcbX1su9@mlflow-backend-remote.cspfunjl7cni.ap-southeast-1.rds.amazonaws.com:5432/mlflow_db \
-  --default-artifact-root s3://mlflow-artifacts-remote-1212
+mlflow server
+    --host 0.0.0.0 \
+    --port 5000 \
+    --backend-store-uri postgresql://${MLFLOW_DB_USER}:${MLFLOW_DB_PASSWORD}@${MLFLOW_DB_ENDPOINT}:5432/${MLFLOW_DB_NAME} \
+    --default-artifact-root s3://${MLFLOW_BUCKET}
 ```
 
 Maybe put the auth stuff in `.env` and `source .env` to use them as shell variables.
 
-When running `train.py` to access the remote tracking server, ran into this error: `WARNING mlflow.utils.autologging_utils: Encountered unexpected error during sklearn autologging: Unable to locate credentials`. 
+When running `train.py` to access the remote tracking server, ran into this error: `WARNING mlflow.utils.autologging_utils: Encountered unexpected error during sklearn autologging: Unable to locate credentials`.
 
 Resolution: Include AWS credentials to localhost machine. Even though the remote tracking server already has that info, the localhost also needs to contact the remote artifact store (S3) per this schematic:
 
@@ -202,7 +201,7 @@ Resolution: Include AWS credentials to localhost machine. Even though the remote
 
 Two ways to store AWS credential to access S3 artifact store [per aws documentation](https://docs.aws.amazon.com/sdk-for-java/latest/developer-guide/setup.html#setup-credentials):
 
-1. store in `~/.aws/credentials` 
+1. store in `~/.aws/credentials`
 2. `export AWS_ACCESS_KEY_ID=key_id_here AWS_SECRET_ACCESS_KEY=secret_here`
 3. env vars are prioritized before `credentials` file
    * `unset` can clear environment vars
@@ -212,11 +211,11 @@ Two ways to store AWS credential to access S3 artifact store [per aws documentat
    * NO dice
    * The jupyter environment inside VS is somehow not recognize any of the env variables, even after setting `os.environ['KEY'] = value`. Works when I migrated the code to `rf.py`
 
-Alternatively, we can avoid having end-user (me) needing to manage artifact via scenario 5: MLflow Tracking Server enabled with proxied artifact storage access. This must be set when starting the server with `mlflow server --backend-store-uri postgresql://URI --artifacts-destination s3://bucket_name/mlartifacts --serve-artifacts --host ...` 
+Alternatively, we can avoid having end-user (me) needing to manage artifact via scenario 5: MLflow Tracking Server enabled with proxied artifact storage access. This must be set when starting the server with `mlflow server --backend-store-uri postgresql://URI --artifacts-destination s3://bucket_name/mlartifacts --serve-artifacts --host ...`
 
 Going further along this vein, if we only need the tracking server to serve artifacts, and not log any additional training (i.e. for deployment purposes), we can start the MLflow server via `--artifacts-only` flag which disables all Tracking Server functionality. Again this decouples the user from credential management. [Scenario 6 in MLflow docs](https://www.mlflow.org/docs/latest/tracking.html#id33)
 
-Access with `http://13.215.46.159:5000/`
+Access with `http://<mlops_zoomcamp_IP>:5000/`
 
 #### Register top model
 
@@ -307,7 +306,7 @@ def lambda_handler(event, context):
 
 Outline
 
-1. Create data stream (Topic) B to send data from backend to consumer. 
+1. Create data stream (Topic) B to send data from backend to consumer.
 2. Create the consumer function
 3. Deploy consumer function as google function (or AWS lambda???)
 4. Create Topic B to ingest output from the function
@@ -320,3 +319,5 @@ Outline
   * pub/sub service agent
   * functions service agent
 * Add key and save the json for our terminal to use
+
+**Continued in `4-deploy-stream.md`**

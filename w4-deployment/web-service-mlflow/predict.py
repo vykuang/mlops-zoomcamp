@@ -1,48 +1,54 @@
-import pickle
 # import argparse
 import logging
-# import string
 
-from flask import Flask, request, jsonify
+# import string
+import os
+import pickle
 
 import mlflow
+from flask import Flask, jsonify, request
 from mlflow.tracking import MlflowClient
 
-# MLFLOW_TRACKING_URI = 'http://13.215.46.159:5000/'
+# MLFLOW_TRACKING_URI = 'http://${MLFLOW_IP}:5000/'
 # how do I parametrize this when running from CLI?
-TRACKING_IP = '13.215.46.159'
-EXP_NAME = 'green-taxi-duration'
-RUN_ID = '815e49bd6e69425d977f2042f7f74c97'
+# export to shell env var before runniing this as script
+# if dockerized, env vars will be passed in .env file
+MLFLOW_TRACKING_IP = os.getenv("MLFLOW_TRACKING_IP")
+MLFLOW_EXP_NAME = os.getenv("MLFLOW_EXP_NAME")
+MLFLOW_RUN_ID = os.getenv("MLFLOW_RUN_ID")
+MLFLOW_MODEL_URI = os.getenv("MLFLOW_MODEL_URI")
 
 
 def prepare_features(ride):
-    print('prepping features')
+    print("prepping features")
     features = {}
-    features['PU_DO'] = f"{ride['PULocationID']}_{ride['DOLocationID']}"
-    features['trip_distance'] = ride['trip_distance']
+    features["PU_DO"] = f"{ride['PULocationID']}_{ride['DOLocationID']}"
+    features["trip_distance"] = ride["trip_distance"]
     return features
 
+
 def predict(features):
-    '''
+    """
     Model is now a sklearn pipeline object which combines the dict_vect
     as well as the random forest model
-    '''
+    """
 
     # full s3 path: s3://bucket_name/<exp_id>/run_id/artifacts/model
-    model_uri = f's3://mlflow-artifacts-remote-1212/3/{RUN_ID}/artifacts/model/'
-    print('loading model')
+    model_uri = MLFLOW_MODEL_URI
+    print("loading model")
     model = mlflow.pyfunc.load_model(model_uri=model_uri)
     preds = model.predict(features)
     # casts from numpy to regular python type
     # to allow serialization
     return float(preds[0])
 
+
 # name of our flask app
-app = Flask('duration-prediction')
+app = Flask("duration-prediction")
 
 # name our route something different than our app
 # i.e. what actions it's doing
-@app.route('/predict', methods=['POST'])
+@app.route("/predict", methods=["POST"])
 def predict_endpoint():
     """Joining the above funcs into one invocation triggered
     by an HTTP POST request
@@ -51,24 +57,25 @@ def predict_endpoint():
     """
     # from the POST request
     ride = request.get_json()
-    print('received POST')
-    logging.info('Received POST request')
+    print("received POST")
+    logging.info("Received POST request")
 
     features = prepare_features(ride)
     preds = predict(features)
     result = {
-        'duration': preds,
-        'model_version': RUN_ID,
+        "duration": preds,
+        "model_version": MLFLOW_RUN_ID,
     }
 
-    logging.info('Duration prediction made')
+    logging.info("Duration prediction made")
 
     # jsonify improves upon json.dumps
     return jsonify(result)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     app.run(
         debug=True,
-        host='0.0.0.0',
+        host="0.0.0.0",
         port=9696,
     )
