@@ -1,9 +1,5 @@
-# import argparse
 import logging
-
-# import string
 import os
-import pickle
 
 import mlflow
 from flask import Flask, jsonify, request
@@ -43,6 +39,16 @@ def predict(features):
     return float(preds[0])
 
 
+def save_to_db():
+    """Save prediction metadata to a DB for batch monitoring"""
+    pass
+
+
+def send_to_evidently():
+    """Send online prediction metadata to Evidently for realtime monitoring"""
+    pass
+
+
 # name of our flask app
 app = Flask("duration-prediction")
 
@@ -57,7 +63,6 @@ def predict_endpoint():
     """
     # from the POST request
     ride = request.get_json()
-    print("received POST")
     logging.info("Received POST request")
 
     features = prepare_features(ride)
@@ -66,8 +71,10 @@ def predict_endpoint():
         "duration": preds,
         "model_version": MLFLOW_RUN_ID,
     }
-
     logging.info("Duration prediction made")
+
+    save_to_db()
+    send_to_evidently()
 
     # jsonify improves upon json.dumps
     return jsonify(result)
